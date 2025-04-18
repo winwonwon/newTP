@@ -7,6 +7,13 @@ from torchvision.models.detection import fasterrcnn_resnet50_fpn
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor  
 from torchvision.models.detection import FasterRCNN
 from torchvision.models.detection.rpn import AnchorGenerator
+import torchvision
+from torchvision.models.detection import FasterRCNN
+from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
+from torchvision.models.detection.rpn import AnchorGenerator
+from torchvision.ops import MultiScaleRoIAlign
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+import torch.nn as nn
 
 def pretrainedModel(num_classes):
     model = fasterrcnn_resnet50_fpn(pretrained=True)
@@ -84,156 +91,73 @@ def Model2(num_classes):
                      rpn_anchor_generator=anchor_generator,
                      box_roi_pool=roi_pooler)
 
-def Model6(num_classes):
-    backbone = nn.Sequential(
-        nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False),
-        nn.BatchNorm2d(64),
-        nn.ReLU(inplace=True),
-        nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
-        make_layer(64, 64, 3),
-        make_layer(64, 128, 4, stride=2),
-        make_layer(128, 256, 6, stride=2),
-        make_layer(256, 512, 3, stride=2),
-    )
-    backbone.out_channels = 512
-
-    anchor_generator = AnchorGenerator(
-        sizes=((32, 64, 128),),
-        aspect_ratios=((0.5, 1.0, 2.0),)
-    )
-    roi_pooler = torchvision.ops.MultiScaleRoIAlign(['0'], output_size=7, sampling_ratio=2)
-
-    model = FasterRCNN(backbone, num_classes,
-                       rpn_anchor_generator=anchor_generator,
-                       box_roi_pool=roi_pooler)
-    return model
-
-class DepthwiseConv(nn.Module):
-    def __init__(self, in_ch, out_ch):
-        super().__init__()
-        self.depthwise = nn.Conv2d(in_ch, in_ch, kernel_size=3, padding=1, groups=in_ch)
-        self.pointwise = nn.Conv2d(in_ch, out_ch, kernel_size=1)
-
-    def forward(self, x):
-        x = self.depthwise(x)
-        x = self.pointwise(x)
-        return x
-
-def Model3(num_classes):
-    backbone = nn.Sequential(
-        DepthwiseConv(3, 32),
-        nn.ReLU(),
-        DepthwiseConv(32, 64),
-        nn.ReLU(),
-        DepthwiseConv(64, 128),
-        nn.ReLU()
-    )
-    backbone.out_channels = 128
-
-    anchor_generator = AnchorGenerator(sizes=((32, 64),), aspect_ratios=((0.5, 1.0, 2.0),))
-    roi_pooler = torchvision.ops.MultiScaleRoIAlign(['0'], 7, 2)
-
-    model = FasterRCNN(backbone,
-                       num_classes=num_classes,
-                       rpn_anchor_generator=anchor_generator,
-                       box_roi_pool=roi_pooler)
-    return model
-
-
-class BasicBlock(nn.Module):
-    def __init__(self, in_ch, out_ch):
-        super().__init__()
-        self.conv1 = nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm2d(out_ch)
-        self.relu = nn.ReLU()
-        self.conv2 = nn.Conv2d(out_ch, out_ch, kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm2d(out_ch)
-
-        self.skip = nn.Conv2d(in_ch, out_ch, kernel_size=1) if in_ch != out_ch else nn.Identity()
-
-    def forward(self, x):
-        identity = self.skip(x)
-        out = self.relu(self.bn1(self.conv1(x)))
-        out = self.bn2(self.conv2(out))
-        out += identity
-        return self.relu(out)
-
-def Model4(num_classes):
-    backbone = nn.Sequential(
-        nn.Conv2d(3, 64, 3, 2, 1),
-        nn.ReLU(),
-        nn.Dropout2d(0.25),
-        nn.Conv2d(64, 128, 3, 2, 1),
-        nn.ReLU(),
-        nn.Dropout2d(0.3),
-        nn.Conv2d(128, 256, 3, 2, 1),
-        nn.ReLU(),
-        nn.Dropout2d(0.4)
-    )
-    backbone.out_channels = 256
-
-    anchor_generator = AnchorGenerator(sizes=((32, 64, 128),), aspect_ratios=((0.5, 1.0, 2.0),))
-    roi_pooler = torchvision.ops.MultiScaleRoIAlign(['0'], 7, 2)
-
-    model = FasterRCNN(backbone, num_classes=num_classes,
-                       rpn_anchor_generator=anchor_generator,
-                       box_roi_pool=roi_pooler)
-    return model
-
-def Model5(num_classes):
-    backbone = nn.Sequential(
-        nn.Conv2d(3, 64, 3, 2, 1),
-        nn.GroupNorm(8, 64),
-        nn.ReLU(),
-        nn.Conv2d(64, 128, 3, 2, 1),
-        nn.GroupNorm(8, 128),
-        nn.ReLU(),
-        nn.Conv2d(128, 256, 3, 2, 1),
-        nn.GroupNorm(8, 256),
-        nn.ReLU()
-    )
-    backbone.out_channels = 256
-
-    anchor_generator = AnchorGenerator(sizes=((32, 64, 128),),
-                                       aspect_ratios=((0.5, 1.0, 2.0),))
-    roi_pooler = torchvision.ops.MultiScaleRoIAlign(['0'], 7, 2)
-
-    model = FasterRCNN(backbone,
-                       num_classes=num_classes,
-                       rpn_anchor_generator=anchor_generator,
-                       box_roi_pool=roi_pooler)
-    return model
-
-
-class BasicResBlock(nn.Module):
-    def __init__(self, in_ch, out_ch, stride=1, downsample=None):
-        super().__init__()
-        self.conv1 = nn.Conv2d(in_ch, out_ch, kernel_size=3, stride=stride, padding=1)
-        self.bn1 = nn.BatchNorm2d(out_ch)
-        self.relu = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv2d(out_ch, out_ch, kernel_size=3, stride=1, padding=1)
-        self.bn2 = nn.BatchNorm2d(out_ch)
-        self.downsample = downsample
-
-    def forward(self, x):
-        identity = x
-        if self.downsample is not None:
-            identity = self.downsample(x)
-
-        out = self.relu(self.bn1(self.conv1(x)))
-        out = self.bn2(self.conv2(out))
-        out += identity
-        return self.relu(out)
-
-def make_layer(in_ch, out_ch, blocks, stride=1):
-    downsample = None
-    if stride != 1 or in_ch != out_ch:
-        downsample = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, kernel_size=1, stride=stride),
-            nn.BatchNorm2d(out_ch)
+class SEBlock(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(SEBlock, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(
+            nn.Linear(channel, channel // reduction, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Linear(channel // reduction, channel, bias=False),
+            nn.Sigmoid()
         )
 
-    layers = [BasicResBlock(in_ch, out_ch, stride, downsample)]
-    for _ in range(1, blocks):
-        layers.append(BasicResBlock(out_ch, out_ch))
-    return nn.Sequential(*layers)
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        y = self.avg_pool(x).view(b, c)
+        y = self.fc(y).view(b, c, 1, 1)
+        return x * y.expand_as(x)
+
+# Integrate SEBlock into the backbone
+class ResNetWithSE(nn.Module):
+    def __init__(self, backbone):
+        super(ResNetWithSE, self).__init__()
+        self.body = backbone.body
+        self.fpn = backbone.fpn
+
+        # Add SE blocks after Conv2d layers in backbone (optional)
+        for name, module in self.body.named_children():
+            if isinstance(module, nn.Sequential):
+                for idx, layer in enumerate(module):
+                    if isinstance(layer, nn.Conv2d):
+                        module[idx] = nn.Sequential(
+                            layer,
+                            SEBlock(layer.out_channels)
+                        )
+
+        # Tell FasterRCNN how many channels your FPN returns
+        self.out_channels = 256
+
+    def forward(self, x):
+        x = self.body(x)
+        x = self.fpn(x)
+        return x
+
+def Model6(num_classes):
+    # Load a pre-trained ResNet50 backbone with FPN
+    backbone = resnet_fpn_backbone('resnet50', pretrained=True)
+    # Wrap the backbone with SE blocks
+    backbone_with_se = ResNetWithSE(backbone)
+    
+    # Define the anchor generator
+    anchor_generator = AnchorGenerator(
+        sizes=((16,), (32,), (64,), (128,), (256,)),  # ← one per feature map
+        aspect_ratios=((0.5, 1.0, 2.0),) * 5          # ← repeat aspect ratios 5 times
+    )
+            
+    # Define the ROI pooler
+    roi_pooler = torchvision.ops.MultiScaleRoIAlign(
+        featmap_names=['0', '1', '2', '3', 'pool'],
+        output_size=7,
+        sampling_ratio=2
+    )
+    
+    # Create the Faster R-CNN model
+    model = FasterRCNN(
+        backbone=backbone_with_se,
+        num_classes=num_classes,
+        rpn_anchor_generator=anchor_generator,
+        box_roi_pool=roi_pooler
+    )
+    
+    return model

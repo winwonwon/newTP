@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from dataset import CocoCrackDataset
 from torch.utils.tensorboard import SummaryWriter
 from dl_utils import get_transform, collate_fn
-from model import pretrainedModel, Model1, Model2, Model3, Model4, Model5, Model6
+from model import pretrainedModel, Model1, Model2, Model6
 from evaluate import evaluate_model
 from visualize import visualize_predictions
 from torch.amp import GradScaler, autocast
@@ -56,11 +56,30 @@ def train_model(data_dir, num_epochs=10, batch_size=4, model_choice="Model6"):
     
     # Initialize model
     model = model_dict[model_choice](num_classes=2)
+
+    # Debug: Check feature map output count
+    # model.to(device)
+    # model.eval()
+    # x_dummy = [train_ds[0][0].to(device)]
+    # with torch.no_grad():
+    #     feature_maps = model.backbone(x_dummy[0].unsqueeze(0))
+
+    #     if isinstance(feature_maps, dict):
+    #         print("🔍 Feature map keys:", list(feature_maps.keys()))
+    #         print("🔍 Number of feature maps:", len(feature_maps))
+    #     else:
+    #         print("🔍 Single feature map detected")
+
+    # Freeze backbone layers to speed up training
+    for name, param in model.backbone.named_parameters():
+        param.requires_grad = False
+    
     model.to(device)
+    model.eval()
 
     # Optimizer & Scheduler
     optimizer = optim.AdamW(
-        [p for p in model.parameters() if p.requires_grad],
+    [p for p in model.parameters() if p.requires_grad],
         lr=0.0005,
         weight_decay=0.01
     )
@@ -126,4 +145,4 @@ def train_model(data_dir, num_epochs=10, batch_size=4, model_choice="Model6"):
 
 if __name__ == "__main__":
     data_path = "dataset"
-    train_model(data_path, num_epochs=5, batch_size=16, model_choice="PreTrained")
+    train_model(data_path, num_epochs=15, batch_size=16, model_choice="PreTrained")

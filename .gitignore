@@ -2,4 +2,8 @@
 /viz_results
 /__pycache__
 /outputs
+/results
+/runs
 
+*.pth
+!spec/*.pth
