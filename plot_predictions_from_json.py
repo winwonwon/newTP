@@ -5,6 +5,10 @@ from torchvision.transforms import functional as F
 from PIL import Image
 import os
 
+from dataset import CocoCrackDataset
+from model import Model6, pretrainedModel  # or Model2, Model1, etc.
+from dl_utils import get_transform
+
 def visualize_predictions(model, dataset, device, num_images=5, threshold=0.5, output_dir="viz_results"):
     os.makedirs(output_dir, exist_ok=True)
     model.eval()
@@ -39,7 +43,6 @@ def visualize_predictions(model, dataset, device, num_images=5, threshold=0.5, o
         plt.axis('off')
         plt.title(f"Image {idx+1}: Green=GT, Red=Pred ≥ {threshold}")
 
-        # Add legend
         green_patch = patches.Patch(color='green', label='Ground Truth')
         red_patch = patches.Patch(color='red', label='Prediction')
         ax.legend(handles=[green_patch, red_patch], loc='lower right')
@@ -48,3 +51,20 @@ def visualize_predictions(model, dataset, device, num_images=5, threshold=0.5, o
         plt.savefig(save_path, bbox_inches='tight')
         plt.close()
         print(f"Saved: {save_path}")
+
+if __name__ == "__main__":
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Load dataset
+    dataset = CocoCrackDataset(
+        root="dataset/test/images",
+        annotation="dataset/test/_annotations.coco.json",
+        transforms=get_transform(train=False)
+    )
+
+    # Load model
+    model = pretrainedModel(num_classes=2)
+    model.load_state_dict(torch.load("model_PreTrained.pth", map_location=device))
+    model.to(device)
+
+    visualize_predictions(model, dataset, device, num_images=10, threshold=0.01, output_dir="viz_results")

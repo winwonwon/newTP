@@ -3,6 +3,7 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from dataset import CocoCrackDataset
+from torch.utils.tensorboard import SummaryWriter
 from dl_utils import get_transform, collate_fn
 from model import pretrainedModel, Model1, Model2, Model3, Model4, Model5, Model6
 from evaluate import evaluate_model
@@ -28,6 +29,10 @@ def load_datasets(data_dir):
     return train_ds, val_ds, test_ds
 
 def train_model(data_dir, num_epochs=10, batch_size=4, model_choice="Model6"):
+
+    log_dir = os.path.join("runs", model_choice)
+    writer = SummaryWriter(log_dir=log_dir)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_ds, val_ds, test_ds = load_datasets(data_dir)
 
@@ -36,6 +41,7 @@ def train_model(data_dir, num_epochs=10, batch_size=4, model_choice="Model6"):
 
     # Select model
     model_dict = {
+        "PreTrained": pretrainedModel,
         "Model1": Model1,
         "Model2": Model2,
         "Model6": Model6
@@ -56,7 +62,7 @@ def train_model(data_dir, num_epochs=10, batch_size=4, model_choice="Model6"):
         epoch_loss = 0
         start_time = time.time()
 
-        for images, targets in train_loader:
+        for step, (images, targets) in enumerate(train_loader):
             images = [img.to(device) for img in images]
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
@@ -69,8 +75,15 @@ def train_model(data_dir, num_epochs=10, batch_size=4, model_choice="Model6"):
 
             epoch_loss += losses.item()
 
+            # Log step-level loss
+            writer.add_scalar('Loss/train_step', losses.item(), epoch * len(train_loader) + step)
+
         lr_scheduler.step()
         elapsed = time.time() - start_time
+
+        # Log epoch-level loss and LR
+        writer.add_scalar('Loss/train_epoch', epoch_loss, epoch)
+        writer.add_scalar('LR', optimizer.param_groups[0]['lr'], epoch)
 
         print(f"[Epoch {epoch+1}] Loss: {epoch_loss:.4f} | LR: {optimizer.param_groups[0]['lr']:.6f} | Time: {elapsed:.2f}s")
 
@@ -92,7 +105,8 @@ def train_model(data_dir, num_epochs=10, batch_size=4, model_choice="Model6"):
     model_file = f"model_{model_choice}.pth"
     torch.save(model.state_dict(), model_file)
     print(f"\nModel saved to {model_file}")
+    writer.close()
 
 if __name__ == "__main__":
     data_path = "dataset"
-    train_model(data_path, num_epochs=15, batch_size=4, model_choice="Model1")
+    train_model(data_path, num_epochs=15, batch_size=4, model_choice="Model2")
