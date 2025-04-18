@@ -71,8 +71,8 @@ def train_model(data_dir, num_epochs=10, batch_size=4, model_choice="Model6"):
     #         print("🔍 Single feature map detected")
 
     # Freeze backbone layers to speed up training
-    for name, param in model.backbone.named_parameters():
-        param.requires_grad = False
+    # for name, param in model.backbone.named_parameters():
+    #     param.requires_grad = False
     
     model.to(device)
     model.eval()
@@ -83,7 +83,6 @@ def train_model(data_dir, num_epochs=10, batch_size=4, model_choice="Model6"):
         lr=0.0005,
         weight_decay=0.01
     )
-    lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
     
     # Initialize GradScaler with new syntax
     scaler = GradScaler(device='cuda')
@@ -117,7 +116,6 @@ def train_model(data_dir, num_epochs=10, batch_size=4, model_choice="Model6"):
             epoch_loss += losses.item()
             writer.add_scalar('Loss/train_step', losses.item(), epoch * len(train_loader) + step)
 
-        lr_scheduler.step()
         elapsed = time.time() - start_time
 
         writer.add_scalar('Loss/train_epoch', epoch_loss, epoch)
@@ -145,4 +143,4 @@ def train_model(data_dir, num_epochs=10, batch_size=4, model_choice="Model6"):
 
 if __name__ == "__main__":
     data_path = "dataset"
-    train_model(data_path, num_epochs=15, batch_size=16, model_choice="PreTrained")
+    train_model(data_path, num_epochs=15, batch_size=16, model_choice="Model2")

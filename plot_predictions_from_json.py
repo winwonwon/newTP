@@ -67,8 +67,8 @@ if __name__ == "__main__":
     )
 
     # Load model
-    model = Model6(num_classes=2)
-    model.load_state_dict(torch.load("model_Model6.pth", map_location=device))
+    model = Model2(num_classes=2)
+    model.load_state_dict(torch.load("model_Model2.pth", map_location=device))
     model.to(device)
 
     visualize_predictions(model, dataset, device, num_images=40, threshold=0.5, output_dir="viz_results")
