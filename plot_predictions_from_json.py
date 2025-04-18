@@ -67,4 +67,4 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load("model_PreTrained.pth", map_location=device))
     model.to(device)
 
-    visualize_predictions(model, dataset, device, num_images=10, threshold=0.01, output_dir="viz_results")
+    visualize_predictions(model, dataset, device, num_images=10, threshold=0.15, output_dir="viz_results")

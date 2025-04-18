@@ -3,17 +3,28 @@
 import torchvision.transforms as T
 
 def get_transform(train):
-    transforms = [T.ToTensor()]
     if train:
-        transforms += [
-            T.RandomHorizontalFlip(0.5),
-            T.RandomVerticalFlip(0.2),
-            T.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.05),
-            T.RandomRotation(degrees=10),
-            T.RandomAdjustSharpness(2, p=0.3),
-            T.RandomAutocontrast(p=0.2)
+        transforms = [
+            # PIL-based transforms first
+            T.RandomGrayscale(p=0.2),  # 20% chance to convert to grayscale
+            T.ColorJitter(brightness=0.3, contrast=0.3),  # Optional: keep color jitter
+            
+            # Tensor conversions and subsequent transforms
+            T.ToTensor(),
+            T.RandomHorizontalFlip(p=0.5),
+            T.RandomVerticalFlip(p=0.3),
+            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ]
+    else:
+        transforms = [
+            T.ToTensor(),
+            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ]
+    
     return T.Compose(transforms)
+
+def collate_fn(batch):
+    return tuple(zip(*batch))
 
 def collate_fn(batch):
     return tuple(zip(*batch))
