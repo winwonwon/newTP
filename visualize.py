@@ -7,7 +7,7 @@ from torchvision.transforms import functional as F
 from PIL import Image
 import os
 
-def visualize_predictions(model, dataset, device, num_images=5, threshold=0.7, output_dir="viz_results"):
+def visualize_predictions(model, dataset, device, num_images=20, threshold=0.01, output_dir="viz_results"):
     os.makedirs(output_dir, exist_ok=True)
     model.eval()
 
