@@ -1,5 +1,6 @@
 # train.py
 
+import time
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
@@ -46,6 +47,8 @@ def train_model(data_dir, num_epochs=10, batch_size=2):
     for epoch in range(num_epochs):
         model.train()
         epoch_loss = 0
+        start_time = time.time()
+
         for images, targets in train_loader:
             images = [img.to(device) for img in images]
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
@@ -59,15 +62,28 @@ def train_model(data_dir, num_epochs=10, batch_size=2):
 
             epoch_loss += losses.item()
 
-        print(f"[Epoch {epoch+1}] Loss: {epoch_loss:.4f}")
+        end_time = time.time()
+        elapsed = end_time - start_time
+        print(f"[Epoch {epoch+1}] Loss: {epoch_loss:.4f} | Time: {elapsed:.2f}s")
 
-    # Evaluate on test set
-    annotation_file = os.path.join(data_dir, "test/_annotations.coco.json")
-    evaluate_model(model, test_ds, annotation_file, device)
+    # === Evaluate and visualize on validation set ===
+    print("\nEvaluating on validation set...")
+    val_ann_file = os.path.join(data_dir, "valid/_annotations.coco.json")
+    os.makedirs("outputs/val", exist_ok=True)
+    evaluate_model(model, val_ds, val_ann_file, device, results_file="outputs/val/results.json")
+    visualize_predictions(model, val_ds, device, output_dir="outputs/val/visualizations")
 
-    # Visualize predictions on test set
-    visualize_predictions(model, test_ds, device, num_images=5)
+    # === Evaluate and visualize on test set ===
+    print("\nEvaluating on test set...")
+    test_ann_file = os.path.join(data_dir, "test/_annotations.coco.json")
+    os.makedirs("outputs/test", exist_ok=True)
+    evaluate_model(model, test_ds, test_ann_file, device, results_file="outputs/test/results.json")
+    visualize_predictions(model, test_ds, device, output_dir="outputs/test/visualizations")
+
+    # Optional: Save the model
+    torch.save(model.state_dict(), "crack_model.pth")
+    print("Model saved to crack_model.pth")
 
 if __name__ == "__main__":
     data_path = "dataset"
-    train_model(data_path,1,8)
+    train_model(data_path, num_epochs=3, batch_size=16)

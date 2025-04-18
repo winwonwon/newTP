@@ -7,12 +7,12 @@ import os
 import torch
 from tqdm import tqdm
 
-def evaluate_model(model, dataset, annotation_file, device, results_file='results.json'):
+def evaluate_model(model, dataset, annotation_file, device, results_file='results.json', quiet=False):
     model.eval()
     coco_gt = COCO(annotation_file)
     results = []
 
-    for idx in tqdm(range(len(dataset))):
+    for idx in range(len(dataset)):
         img, target = dataset[idx]
         img_id = target['image_id'].item()
         img_tensor = img.to(device)
@@ -24,21 +24,22 @@ def evaluate_model(model, dataset, annotation_file, device, results_file='result
             xmin, ymin, xmax, ymax = box
             width = xmax - xmin
             height = ymax - ymin
-            result = {
+            results.append({
                 'image_id': img_id,
                 'category_id': int(label),
                 'bbox': [xmin.item(), ymin.item(), width.item(), height.item()],
                 'score': score.item()
-            }
-            results.append(result)
+            })
 
-    # Save results to JSON
     with open(results_file, 'w') as f:
-        json.dump(results, f, indent=4)
+        json.dump(results, f)
 
-    # Load results and evaluate
+    if not quiet:
+        print(f"🔄 Saved predictions to: {results_file}")
+
     coco_dt = coco_gt.loadRes(results_file)
     coco_eval = COCOeval(coco_gt, coco_dt, iouType='bbox')
     coco_eval.evaluate()
     coco_eval.accumulate()
     coco_eval.summarize()
+
